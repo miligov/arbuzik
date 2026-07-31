@@ -670,6 +670,20 @@ function resize(){
   lineY=H*0.145;
   buildSprites();
 }
+/* Спрайты строятся один раз и кэшируются. Если шрифт эмодзи ещё не
+   готов (частый случай на iOS), в кэш попадают пустые кружки и такими
+   и остаются. Поэтому пересобираем кэш, когда шрифты догрузились. */
+function refreshSpritesWhenFontsReady(){
+  var again=function(){ try{buildSprites();}catch(e){} };
+  if(document.fonts&&document.fonts.ready&&document.fonts.ready.then){
+    document.fonts.ready.then(again).catch(function(){});
+  }
+  /* подстраховка: некоторые версии iOS резолвят fonts.ready слишком рано */
+  setTimeout(again,400);
+  setTimeout(again,1500);
+  window.addEventListener('load',again);
+}
+refreshSpritesWhenFontsReady();
 window.addEventListener('resize',function(){setTimeout(resize,80);});
 window.addEventListener('orientationchange',function(){setTimeout(resize,260);});
 
@@ -732,7 +746,10 @@ function solve(){
     if(d2>=rr*rr||d2<=0.0000001)continue;
     var d=Math.sqrt(d2);
     /* слияние одинаковых */
-    if(a.t===c.t&&a.t<MAXT&&d<rr*0.995){
+    /* Порог 0.995 был жёстче, чем расталкивание (оно разводит ровно
+       на rr): шары замирали вплотную и не сливались никогда.
+       Достаточно любого касания. */
+    if(a.t===c.t&&a.t<MAXT){
       a.merged=c.merged=true;
       pendingMerge.push([a,c]);
       continue;
@@ -974,6 +991,164 @@ function showCombo(t){
    8. ОТРИСОВКА
    ============================================================ */
 var sprites=[];
+
+/* ============================================================
+   Детали фруктов рисуем кодом.
+   Эмодзи в canvas — ненадёжно: на iOS цветной шрифт может быть ещё
+   не готов в момент построения кэша, и модерация видела пустые
+   кружки. Своя отрисовка выглядит одинаково на всех устройствах.
+   ============================================================ */
+function fruitArt(g,t,rr){
+  var s=rr*2;
+  function leaf(ang,len,wid,col){
+    g.save();g.translate(rr,rr-rr*0.72);g.rotate(ang);
+    g.fillStyle=col||'#4caf50';
+    g.beginPath();
+    g.moveTo(0,0);
+    g.quadraticCurveTo(len*0.5,-wid,len,0);
+    g.quadraticCurveTo(len*0.5,wid,0,0);
+    g.closePath();g.fill();
+    g.restore();
+  }
+  function stem(h,w,col){
+    g.fillStyle=col||'#7a4f24';
+    g.beginPath();
+    g.moveTo(rr-w/2,rr-rr*0.66);
+    g.quadraticCurveTo(rr-w*0.2,rr-rr*0.95,rr+w*0.6,rr-rr*1.0);
+    g.quadraticCurveTo(rr-w*0.1,rr-rr*0.86,rr+w/2,rr-rr*0.66);
+    g.closePath();g.fill();
+  }
+  function seeds(n,rad,sz,col,rot){
+    g.fillStyle=col||'rgba(255,255,255,.85)';
+    for(var i=0;i<n;i++){
+      var a=(i/n)*Math.PI*2+(rot||0);
+      g.save();
+      g.translate(rr+Math.cos(a)*rad,rr+Math.sin(a)*rad);
+      g.rotate(a+Math.PI/2);
+      g.beginPath();g.ellipse(0,0,sz*0.55,sz,0,0,7);g.fill();
+      g.restore();
+    }
+  }
+  switch(t){
+    case 0: /* черника: хвостик-звёздочка */
+      g.strokeStyle='rgba(20,20,60,.55)';
+      g.lineWidth=Math.max(1,s*0.022);
+      for(var i0=0;i0<5;i0++){
+        var a0=i0/5*Math.PI*2-Math.PI/2;
+        g.beginPath();g.moveTo(rr,rr-rr*0.1);
+        g.lineTo(rr+Math.cos(a0)*rr*0.3,rr-rr*0.1+Math.sin(a0)*rr*0.3);
+        g.stroke();
+      }
+      g.fillStyle='rgba(255,255,255,.35)';
+      g.beginPath();g.arc(rr-rr*0.28,rr-rr*0.3,rr*0.12,0,7);g.fill();
+      break;
+    case 1: /* вишня: пара + черешок */
+      stem(rr*0.16,'#5d3a1a');
+      leaf(-0.5,rr*0.5,rr*0.16);
+      g.fillStyle='rgba(255,255,255,.4)';
+      g.beginPath();g.ellipse(rr-rr*0.3,rr-rr*0.25,rr*0.16,rr*0.11,-0.6,0,7);g.fill();
+      break;
+    case 2: /* клубника: семечки + листья */
+      seeds(7,rr*0.44,s*0.028,'rgba(255,240,180,.95)',0.3);
+      seeds(5,rr*0.2,s*0.026,'rgba(255,240,180,.9)',1.1);
+      leaf(-2.6,rr*0.52,rr*0.2,'#3fa64a');
+      leaf(-0.5,rr*0.52,rr*0.2,'#4cbb57');
+      stem(rr*0.13,'#3d7a2a');
+      break;
+    case 3: /* виноград: гроздь шариков */
+      var pos=[[0,-0.34],[-0.3,-0.06],[0.3,-0.06],[-0.15,0.24],[0.15,0.24],[0,0.5]];
+      for(var i3=0;i3<pos.length;i3++){
+        var bx=rr+pos[i3][0]*rr,by=rr+pos[i3][1]*rr;
+        var gg=g.createRadialGradient(bx-rr*0.06,by-rr*0.07,rr*0.02,bx,by,rr*0.24);
+        gg.addColorStop(0,'#c88ae8');gg.addColorStop(1,'#6f2fa8');
+        g.fillStyle=gg;
+        g.beginPath();g.arc(bx,by,rr*0.23,0,7);g.fill();
+      }
+      leaf(-1.9,rr*0.42,rr*0.18,'#4cbb57');
+      break;
+    case 4: /* мандарин: дольки */
+      g.strokeStyle='rgba(180,80,0,.35)';
+      g.lineWidth=Math.max(1,s*0.016);
+      for(var i4=0;i4<6;i4++){
+        var a4=i4/6*Math.PI*2;
+        g.beginPath();g.moveTo(rr,rr);
+        g.lineTo(rr+Math.cos(a4)*rr*0.72,rr+Math.sin(a4)*rr*0.72);g.stroke();
+      }
+      leaf(-1.2,rr*0.44,rr*0.17,'#3fa64a');
+      stem(rr*0.12,'#5d3a1a');
+      break;
+    case 5: /* яблоко: выемка сверху + блик */
+      g.fillStyle='rgba(120,20,10,.28)';
+      g.beginPath();g.ellipse(rr,rr-rr*0.72,rr*0.22,rr*0.1,0,0,7);g.fill();
+      stem(rr*0.13,'#6b3f1d');
+      leaf(-0.35,rr*0.46,rr*0.17,'#4cbb57');
+      g.fillStyle='rgba(255,255,255,.45)';
+      g.beginPath();g.ellipse(rr-rr*0.32,rr-rr*0.2,rr*0.15,rr*0.26,-0.5,0,7);g.fill();
+      break;
+    case 6: /* груша: намёк на форму + черешок */
+      g.fillStyle='rgba(120,150,20,.2)';
+      g.beginPath();g.ellipse(rr,rr+rr*0.2,rr*0.62,rr*0.55,0,0,7);g.fill();
+      stem(rr*0.12,'#6b4a20');
+      leaf(-0.4,rr*0.42,rr*0.15,'#4cbb57');
+      seeds(3,rr*0.16,s*0.02,'rgba(90,60,20,.5)',0.5);
+      break;
+    case 7: /* персик: бороздка */
+      g.strokeStyle='rgba(190,80,50,.45)';
+      g.lineWidth=Math.max(1.5,s*0.022);
+      g.beginPath();
+      g.moveTo(rr,rr-rr*0.78);
+      g.quadraticCurveTo(rr-rr*0.22,rr,rr,rr+rr*0.78);
+      g.stroke();
+      leaf(-0.9,rr*0.42,rr*0.16,'#3fa64a');
+      g.fillStyle='rgba(255,255,255,.35)';
+      g.beginPath();g.ellipse(rr+rr*0.3,rr-rr*0.28,rr*0.16,rr*0.11,0.5,0,7);g.fill();
+      break;
+    case 8: /* ананас: сетка + корона */
+      g.strokeStyle='rgba(150,90,10,.4)';
+      g.lineWidth=Math.max(1,s*0.014);
+      for(var i8=-3;i8<=3;i8++){
+        g.beginPath();
+        g.moveTo(rr-rr*0.7,rr+i8*rr*0.22);
+        g.lineTo(rr+rr*0.7,rr+i8*rr*0.22-rr*0.3);g.stroke();
+        g.beginPath();
+        g.moveTo(rr-rr*0.7,rr+i8*rr*0.22-rr*0.3);
+        g.lineTo(rr+rr*0.7,rr+i8*rr*0.22);g.stroke();
+      }
+      g.fillStyle='#3fa64a';
+      for(var k8=-2;k8<=2;k8++){
+        g.save();g.translate(rr,rr-rr*0.62);g.rotate(k8*0.36);
+        g.beginPath();
+        g.moveTo(0,0);g.quadraticCurveTo(rr*0.1,-rr*0.34,0,-rr*0.52);
+        g.quadraticCurveTo(-rr*0.1,-rr*0.34,0,0);
+        g.closePath();g.fill();g.restore();
+      }
+      break;
+    case 9: /* дыня: продольные полосы */
+      g.strokeStyle='rgba(120,150,40,.45)';
+      g.lineWidth=Math.max(1.5,s*0.02);
+      for(var i9=-2;i9<=2;i9++){
+        g.beginPath();
+        g.moveTo(rr+i9*rr*0.3,rr-rr*0.94);
+        g.quadraticCurveTo(rr+i9*rr*0.42,rr,rr+i9*rr*0.3,rr+rr*0.94);
+        g.stroke();
+      }
+      stem(rr*0.11,'#6b6b20');
+      break;
+    case 10: /* арбуз: тёмные полосы + семечки */
+      g.strokeStyle='rgba(20,80,25,.6)';
+      g.lineWidth=Math.max(2,s*0.035);
+      for(var iA=-2;iA<=2;iA++){
+        g.beginPath();
+        g.moveTo(rr+iA*rr*0.34,rr-rr*0.93);
+        g.quadraticCurveTo(rr+iA*rr*0.48,rr,rr+iA*rr*0.34,rr+rr*0.93);
+        g.stroke();
+      }
+      g.fillStyle='rgba(20,60,20,.5)';
+      seeds(6,rr*0.5,s*0.026,'rgba(25,60,25,.55)',0.4);
+      break;
+  }
+}
+
 function buildSprites(){
   sprites=[];
   for(var t=0;t<FR.length;t++){
@@ -998,11 +1173,8 @@ function buildSprites(){
     g.globalAlpha=.34;g.fillStyle='#fff';
     g.beginPath();g.ellipse(rr*0.66,rr*0.55,rr*0.34,rr*0.24,-0.65,0,7);g.fill();
     g.restore();
-    /* эмодзи */
-    var fs=Math.round(s*0.60);
-    g.font=fs+'px serif';g.textAlign='center';g.textBaseline='middle';
-    g.shadowColor='rgba(0,0,0,.22)';g.shadowBlur=s*0.05;g.shadowOffsetY=s*0.02;
-    g.fillText(FR[t].e,rr,rr+s*0.03);
+    /* детали фрукта — своей графикой, без системных шрифтов */
+    fruitArt(g,t,rr);
     sprites.push(c);
   }
 }
@@ -1314,6 +1486,7 @@ vkInit();
 requestAnimationFrame(loop);
 
 /* экспорт для тестов */
+window.__fruitArt=fruitArt;
 window.__M={P:P,G:G,FR:FR,MODES:MODES,get bodies(){return bodies;},
   addBody:addBody,dropFruit:dropFruit,physics:physics,newGame:newGame,
   gameOver:gameOver,revive:revive,onMerge:onMerge,radiusOf:radiusOf,
