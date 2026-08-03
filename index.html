@@ -338,6 +338,70 @@ button:focus-visible,.btn:focus-visible{
   *{animation-duration:.01ms !important;transition-duration:.01ms !important}
 }
 
+
+/* ===== МУЛЬТЯШНЫЙ СЛОЙ ===== */
+/* Казуальная подача: пухлые формы, толстые кромки, пружина.
+   Идёт последним, поэтому переопределяет предыдущие слои. */
+
+/* ---------- кнопки: пухлые и с «хвостиком» тени ---------- */
+.btn,.btn2,.act,.buy{
+  border-radius:20px !important;
+  font-weight:900 !important;
+  letter-spacing:.3px;
+  text-shadow:0 1px 0 rgba(255,255,255,.35);
+  transition:transform .12s cubic-bezier(.34,1.8,.5,1),
+             box-shadow .12s,filter .18s !important;
+}
+.btn{
+  border:2px solid rgba(255,255,255,.30) !important;
+  padding:16px 34px;
+}
+.btn:active,.btn2:active,.act:active,.buy:active{
+  transform:translateY(4px) scale(.97) !important;
+}
+/* мягкое «дыхание» главной кнопки — глаз сразу цепляется */
+@keyframes cartoonBreathe{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-2px) scale(1.022)}
+}
+#playBtn,#btnPlay,#startBtn,#btnStart,.btn.primary{
+  animation:cartoonBreathe 2.4s ease-in-out infinite;
+}
+#playBtn:active,#btnPlay:active,#startBtn:active,#btnStart:active{
+  animation:none;
+}
+
+/* ---------- панели: пухлые карточки ---------- */
+.card,.card2,.panel,.box,.item,.stb,.slot,.spec,.chest,.cr,.tk,.up{
+  border-radius:22px !important;
+  border-width:2px !important;
+}
+.pill,.chip{
+  border-radius:999px !important;
+  border-width:2px !important;
+  font-weight:900 !important;
+}
+
+/* ---------- заголовки: плотные и «наклейкой» ---------- */
+h1{
+  letter-spacing:-1.2px !important;
+  filter:drop-shadow(0 3px 0 rgba(0,0,0,.5))
+         drop-shadow(0 6px 0 rgba(0,0,0,.22))
+         drop-shadow(0 12px 26px rgba(0,0,0,.5)) !important;
+}
+h2{letter-spacing:-.5px !important;font-weight:900 !important}
+
+/* ---------- всплывашка ---------- */
+#toast{border-radius:18px !important;border-width:2px !important;font-weight:800}
+
+/* ---------- иконки в списках крупнее ---------- */
+.item .ic,.ic{font-size:32px}
+
+@media (prefers-reduced-motion:reduce){
+  #playBtn,#btnPlay,#startBtn,#btnStart,.btn.primary{animation:none}
+}
+
+
 </style>
 </head>
 <body>
@@ -1136,30 +1200,43 @@ function fruitArt(g,t,rr){
       g.beginPath();g.ellipse(rr-rr*0.3,rr-rr*0.25,rr*0.16,rr*0.11,-0.6,0,7);g.fill();
       break;
     case 2: /* клубника: семечки + листья */
-      seeds(7,rr*0.44,s*0.028,'rgba(255,240,180,.95)',0.3);
-      seeds(5,rr*0.2,s*0.026,'rgba(255,240,180,.9)',1.1);
+      /* семечки только сверху — низ отдан мордочке */
+      g.fillStyle='rgba(255,240,180,.95)';
+      var sp2=[[-0.50,-0.34],[-0.20,-0.52],[0.14,-0.54],[0.46,-0.34],
+               [-0.62,-0.06],[0.62,-0.06],[-0.34,-0.14],[0.32,-0.16]];
+      for(var i2=0;i2<sp2.length;i2++){
+        g.save();
+        g.translate(rr+sp2[i2][0]*rr,rr+sp2[i2][1]*rr);
+        g.rotate(sp2[i2][0]*0.9);
+        g.beginPath();g.ellipse(0,0,s*0.016,s*0.028,0,0,7);g.fill();
+        g.restore();
+      }
       leaf(-2.6,rr*0.52,rr*0.2,'#3fa64a');
       leaf(-0.5,rr*0.52,rr*0.2,'#4cbb57');
       stem(rr*0.13,'#3d7a2a');
       break;
     case 3: /* виноград: гроздь шариков */
-      var pos=[[0,-0.34],[-0.3,-0.06],[0.3,-0.06],[-0.15,0.24],[0.15,0.24],[0,0.5]];
+      /* гроздь смещена вверх: внизу живёт мордочка */
+      var pos=[[-0.34,-0.52],[0.02,-0.60],[0.36,-0.50],
+               [-0.52,-0.22],[0.52,-0.22],[-0.18,-0.26],[0.20,-0.26]];
       for(var i3=0;i3<pos.length;i3++){
         var bx=rr+pos[i3][0]*rr,by=rr+pos[i3][1]*rr;
-        var gg=g.createRadialGradient(bx-rr*0.06,by-rr*0.07,rr*0.02,bx,by,rr*0.24);
-        gg.addColorStop(0,'#c88ae8');gg.addColorStop(1,'#6f2fa8');
+        var gg=g.createRadialGradient(bx-rr*0.05,by-rr*0.06,rr*0.01,bx,by,rr*0.20);
+        gg.addColorStop(0,'#d9a3f5');gg.addColorStop(1,'#6f2fa8');
         g.fillStyle=gg;
-        g.beginPath();g.arc(bx,by,rr*0.23,0,7);g.fill();
+        g.beginPath();g.arc(bx,by,rr*0.185,0,7);g.fill();
+        g.strokeStyle='rgba(60,20,95,.45)';g.lineWidth=Math.max(1,rr*0.035);
+        g.beginPath();g.arc(bx,by,rr*0.185,0,7);g.stroke();
       }
       leaf(-1.9,rr*0.42,rr*0.18,'#4cbb57');
       break;
     case 4: /* мандарин: дольки */
       g.strokeStyle='rgba(180,80,0,.35)';
       g.lineWidth=Math.max(1,s*0.016);
-      for(var i4=0;i4<6;i4++){
-        var a4=i4/6*Math.PI*2;
-        g.beginPath();g.moveTo(rr,rr);
-        g.lineTo(rr+Math.cos(a4)*rr*0.72,rr+Math.sin(a4)*rr*0.72);g.stroke();
+      for(var i4=0;i4<5;i4++){
+        var a4=Math.PI+i4/4*Math.PI;          /* только верхняя половина */
+        g.beginPath();g.moveTo(rr,rr-rr*0.08);
+        g.lineTo(rr+Math.cos(a4)*rr*0.70,rr-rr*0.08+Math.sin(a4)*rr*0.70);g.stroke();
       }
       leaf(-1.2,rr*0.44,rr*0.17,'#3fa64a');
       stem(rr*0.12,'#5d3a1a');
@@ -1169,8 +1246,8 @@ function fruitArt(g,t,rr){
       g.beginPath();g.ellipse(rr,rr-rr*0.72,rr*0.22,rr*0.1,0,0,7);g.fill();
       stem(rr*0.13,'#6b3f1d');
       leaf(-0.35,rr*0.46,rr*0.17,'#4cbb57');
-      g.fillStyle='rgba(255,255,255,.45)';
-      g.beginPath();g.ellipse(rr-rr*0.32,rr-rr*0.2,rr*0.15,rr*0.26,-0.5,0,7);g.fill();
+      g.fillStyle='rgba(255,255,255,.40)';
+      g.beginPath();g.ellipse(rr-rr*0.44,rr-rr*0.44,rr*0.13,rr*0.22,-0.5,0,7);g.fill();
       break;
     case 6: /* груша: намёк на форму + черешок */
       g.fillStyle='rgba(120,150,20,.2)';
@@ -1180,11 +1257,12 @@ function fruitArt(g,t,rr){
       seeds(3,rr*0.16,s*0.02,'rgba(90,60,20,.5)',0.5);
       break;
     case 7: /* персик: бороздка */
-      g.strokeStyle='rgba(190,80,50,.45)';
-      g.lineWidth=Math.max(1.5,s*0.022);
+      /* бороздка уведена вбок, чтобы не делить мордочку пополам */
+      g.strokeStyle='rgba(190,80,50,.40)';
+      g.lineWidth=Math.max(1.5,s*0.020);
       g.beginPath();
-      g.moveTo(rr,rr-rr*0.78);
-      g.quadraticCurveTo(rr-rr*0.22,rr,rr,rr+rr*0.78);
+      g.moveTo(rr+rr*0.42,rr-rr*0.80);
+      g.quadraticCurveTo(rr+rr*0.66,rr-rr*0.20,rr+rr*0.46,rr+rr*0.42);
       g.stroke();
       leaf(-0.9,rr*0.42,rr*0.16,'#3fa64a');
       g.fillStyle='rgba(255,255,255,.35)';
@@ -1193,14 +1271,18 @@ function fruitArt(g,t,rr){
     case 8: /* ананас: сетка + корона */
       g.strokeStyle='rgba(150,90,10,.4)';
       g.lineWidth=Math.max(1,s*0.014);
-      for(var i8=-3;i8<=3;i8++){
+      /* сетка живёт только выше глаз */
+      g.save();
+      g.beginPath();g.rect(0,0,rr*2,rr*0.92);g.clip();
+      for(var i8=-3;i8<=1;i8++){
         g.beginPath();
-        g.moveTo(rr-rr*0.7,rr+i8*rr*0.22);
-        g.lineTo(rr+rr*0.7,rr+i8*rr*0.22-rr*0.3);g.stroke();
+        g.moveTo(rr-rr*0.75,rr+i8*rr*0.24);
+        g.lineTo(rr+rr*0.75,rr+i8*rr*0.24-rr*0.30);g.stroke();
         g.beginPath();
-        g.moveTo(rr-rr*0.7,rr+i8*rr*0.22-rr*0.3);
-        g.lineTo(rr+rr*0.7,rr+i8*rr*0.22);g.stroke();
+        g.moveTo(rr-rr*0.75,rr+i8*rr*0.24-rr*0.30);
+        g.lineTo(rr+rr*0.75,rr+i8*rr*0.24);g.stroke();
       }
+      g.restore();
       g.fillStyle='#3fa64a';
       for(var k8=-2;k8<=2;k8++){
         g.save();g.translate(rr,rr-rr*0.62);g.rotate(k8*0.36);
@@ -1236,32 +1318,135 @@ function fruitArt(g,t,rr){
   }
 }
 
+/* Мультяшная мордочка: большие блестящие глаза и улыбка.
+   Именно она делает фрукт «живым», как в казуальных играх ВК. */
+function fruitFace(g,t,rr,base){
+  /* Подложка под лицо: мягко гасим текстуру фрукта (семечки, дольки,
+     ягоды грозди) в зоне мордочки, иначе глаза тонут в узоре. */
+  if(base){
+    g.save();
+    var fg=g.createRadialGradient(rr,rr+rr*0.16,rr*0.05,rr,rr+rr*0.16,rr*0.78);
+    fg.addColorStop(0,'rgba(255,255,255,.34)');
+    fg.addColorStop(0.55,'rgba(255,255,255,.16)');
+    fg.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=fg;
+    g.beginPath();g.ellipse(rr,rr+rr*0.16,rr*0.78,rr*0.62,0,0,7);g.fill();
+    g.restore();
+  }
+  var eyeY=rr+rr*0.10;
+  var dx=rr*0.30;                       /* разлёт глаз */
+  var er=rr*0.155;                      /* радиус глаза */
+  var ink='#2a1a24';
+  /* глаза */
+  for(var i=-1;i<=1;i+=2){
+    var ex=rr+i*dx;
+    g.fillStyle='#fff';
+    g.beginPath();g.ellipse(ex,eyeY,er,er*1.12,0,0,7);g.fill();
+    g.lineWidth=Math.max(1,rr*0.045);
+    g.strokeStyle='rgba(42,26,36,.55)';
+    g.beginPath();g.ellipse(ex,eyeY,er,er*1.12,0,0,7);g.stroke();
+    /* зрачок смотрит чуть вверх — взгляд получается добрым */
+    g.fillStyle=ink;
+    g.beginPath();g.arc(ex+i*er*0.10,eyeY-er*0.10,er*0.60,0,7);g.fill();
+    /* два блика: крупный и маленький */
+    g.fillStyle='#fff';
+    g.beginPath();g.arc(ex+i*er*0.10-er*0.22,eyeY-er*0.38,er*0.26,0,7);g.fill();
+    g.beginPath();g.arc(ex+i*er*0.10+er*0.20,eyeY+er*0.16,er*0.13,0,7);g.fill();
+  }
+  /* румянец */
+  g.save();
+  g.globalAlpha=.42;
+  g.fillStyle='#ff7a9c';
+  g.beginPath();g.ellipse(rr-dx-rr*0.16,eyeY+rr*0.30,rr*0.15,rr*0.10,0,0,7);g.fill();
+  g.beginPath();g.ellipse(rr+dx+rr*0.16,eyeY+rr*0.30,rr*0.15,rr*0.10,0,0,7);g.fill();
+  g.restore();
+  /* улыбка */
+  g.strokeStyle=ink;
+  g.lineWidth=Math.max(1.2,rr*0.06);
+  g.lineCap='round';
+  var my=eyeY+rr*0.34;
+  g.beginPath();
+  g.moveTo(rr-rr*0.17,my);
+  g.quadraticCurveTo(rr,my+rr*0.20,rr+rr*0.17,my);
+  g.stroke();
+}
+
 function buildSprites(){
   sprites=[];
   for(var t=0;t<FR.length;t++){
     var r=radiusOf(t);
-    var s=Math.max(8,Math.ceil(r*2*DPR));
+    /* Поля вокруг тела: жирный контур и тень не должны обрезаться.
+       Тело внутри спрайта имеет радиус ровно r*DPR, поэтому при
+       отрисовке достаточно домножить диаметр на sp.k — физический
+       радиус и картинка совпадают точно. */
+    var br=Math.max(4,r*DPR);           /* радиус самого тела, в пикселях */
+    var padPx=Math.max(2,Math.ceil(br*0.17));
+    var s=Math.ceil(br*2)+padPx*2;
     var c=document.createElement('canvas');
     c.width=c.height=s;
     var g=c.getContext('2d');
     var rr=s/2;
-    /* тело */
-    var grd=g.createRadialGradient(rr*0.68,rr*0.62,rr*0.12,rr,rr,rr);
-    grd.addColorStop(0,shade(FR[t].c,42));
-    grd.addColorStop(0.55,FR[t].c);
-    grd.addColorStop(1,shade(FR[t].c,-38));
-    g.fillStyle=grd;
-    g.beginPath();g.arc(rr,rr,rr-1,0,7);g.fill();
-    /* обод */
-    g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=Math.max(1,s*0.014);
-    g.beginPath();g.arc(rr,rr,rr-s*0.012,0,7);g.stroke();
-    /* блик */
+    c.k=s/(br*2);                       /* во сколько раз спрайт шире тела */
+
+    /* мягкая тень под фруктом — объём без тяжёлого shadowBlur */
     g.save();
-    g.globalAlpha=.34;g.fillStyle='#fff';
-    g.beginPath();g.ellipse(rr*0.66,rr*0.55,rr*0.34,rr*0.24,-0.65,0,7);g.fill();
+    g.globalAlpha=.20;g.fillStyle='#7a4a1e';
+    g.beginPath();g.ellipse(rr,rr+br*0.13,br*0.94,br*0.94,0,0,7);g.fill();
     g.restore();
-    /* детали фрукта — своей графикой, без системных шрифтов */
+
+    /* тело: сочный градиент сверху вниз */
+    var grd=g.createRadialGradient(rr-br*0.34,rr-br*0.40,br*0.06,rr,rr,br*1.12);
+    grd.addColorStop(0,shade(FR[t].c,72));
+    grd.addColorStop(0.42,shade(FR[t].c,16));
+    grd.addColorStop(0.78,FR[t].c);
+    grd.addColorStop(1,shade(FR[t].c,-46));
+    g.fillStyle=grd;
+    g.beginPath();g.arc(rr,rr,br,0,7);g.fill();
+
+    /* тёплый отсвет снизу — «отражённый свет», фрукт перестаёт быть плоским */
+    g.save();
+    g.globalAlpha=.30;
+    var gl=g.createLinearGradient(0,rr+br*0.25,0,rr+br);
+    gl.addColorStop(0,'rgba(255,255,255,0)');
+    gl.addColorStop(1,shade(FR[t].c,60));
+    g.fillStyle=gl;
+    g.beginPath();g.arc(rr,rr,br,0,7);g.fill();
+    g.restore();
+
+    /* ЖИРНЫЙ мультяшный контур — главный признак стиля.
+       Рисуем внутрь тела, чтобы силуэт совпадал с физическим радиусом. */
+    var lw=Math.max(1.6,br*0.085);
+    g.strokeStyle=shade(FR[t].c,-96);
+    g.lineWidth=lw;
+    g.beginPath();g.arc(rr,rr,br-lw/2,0,7);g.stroke();
+
+    /* Детали фрукта. fruitArt рисует в системе, где центр (rr,rr)
+       и радиус rr, а тело у нас меньше на поля — масштабируем
+       относительно центра. */
+    g.save();
+    g.beginPath();g.arc(rr,rr,br-lw*0.85,0,7);g.clip();
+    g.translate(rr,rr);
+    g.scale(br/rr,br/rr);
+    g.translate(-rr,-rr);
     fruitArt(g,t,rr);
+    g.restore();
+
+    /* глянец: широкий мягкий блик + тонкая световая дуга */
+    g.save();
+    g.beginPath();g.arc(rr,rr,br-lw*0.7,0,7);g.clip();
+    g.globalAlpha=.50;
+    var sh=g.createLinearGradient(rr-br*0.55,rr-br*0.75,rr-br*0.1,rr-br*0.05);
+    sh.addColorStop(0,'rgba(255,255,255,.95)');
+    sh.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=sh;
+    g.beginPath();g.ellipse(rr-br*0.34,rr-br*0.42,br*0.40,br*0.27,-0.68,0,7);g.fill();
+    g.globalAlpha=.85;
+    g.fillStyle='#fff';
+    g.beginPath();g.ellipse(rr-br*0.40,rr-br*0.50,br*0.16,br*0.09,-0.68,0,7);g.fill();
+    g.restore();
+
+    /* мордочка поверх всего */
+    fruitFace(g,t,br,true);
     sprites.push(c);
   }
 }
@@ -1350,7 +1535,8 @@ function draw(dt){
     var sp=sprites[G.cur];
     if(sp){
       ctx.save();ctx.globalAlpha=.92;
-      ctx.drawImage(sp,gx-r,lineY-r*2-6,r*2,r*2);
+      var k1=sp.k||1, d1=r*2*k1;
+      ctx.drawImage(sp,gx-d1/2,lineY-r-6-d1/2,d1,d1);
       ctx.restore();
     }
   }
@@ -1360,7 +1546,8 @@ function draw(dt){
     var b=bodies[i],sp2=sprites[b.t];
     if(!sp2)continue;
     var sq=b.sq;
-    var w=b.r*2*(1+sq*0.5),h=b.r*2*(1-sq*0.5);
+    var k2=sp2.k||1;
+    var w=b.r*2*k2*(1+sq*0.5),h=b.r*2*k2*(1-sq*0.5);
     ctx.drawImage(sp2,b.x-w/2,b.y-h/2,w,h);
   }
 
@@ -1583,6 +1770,7 @@ requestAnimationFrame(loop);
 /* экспорт для тестов */
 window.__fruitArt=fruitArt;
 window.__M={P:P,G:G,FR:FR,MODES:MODES,get bodies(){return bodies;},
+  get sprites(){return sprites;},buildSprites:buildSprites,
   addBody:addBody,dropFruit:dropFruit,physics:physics,newGame:newGame,
   gameOver:gameOver,revive:revive,onMerge:onMerge,radiusOf:radiusOf,
   checkOver:checkOver,save:save,paintTop:paintTop,paintChain:paintChain,
