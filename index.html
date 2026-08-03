@@ -755,7 +755,12 @@ function radiusOf(t){return FR[t].r*PW;}
 function addBody(x,y,t,vx,vy){
   var r=radiusOf(t);
   var b={id:nextId++,x:x,y:y,px:x-(vx||0),py:y-(vy||0),r:r,t:t,
-         merged:false,sq:0,sqv:0,age:0,rest:0};
+         merged:false,sq:0,sqv:0,age:0,rest:0,
+         /* sup — тело сейчас на что-то опирается (пол или другой фрукт);
+            hot — сколько секунд подряд оно неподвижно торчит над чертой.
+            Летящий вверх фрукт ни на что не опирается, поэтому
+            «Переполнено» из-за него больше не срабатывает. */
+         sup:false,hot:0};
   bodies.push(b);
   return b;
 }
@@ -794,6 +799,7 @@ function solve(){
       b.y=FLOOR-b.r;
       b.py=b.y+vy*REST;
       b.px=b.x+(b.px-b.x)*WALL_F;
+      b.sup=true;                       /* лежит на полу */
       if(vy>W*0.012)impact(b,vy);
     }
     if(b.y-b.r<-H){b.y=-H+b.r;}
@@ -819,6 +825,9 @@ function solve(){
     }
     var overlap=rr-d;
     var nx=dx/d,ny=dy/d;
+    /* кто на кого опирается: нижний держит верхнего */
+    if(dy>rr*0.25)a.sup=true;          /* c ниже a  → a лежит на c */
+    else if(dy<-rr*0.25)c.sup=true;    /* a ниже c  → c лежит на a */
     var ma=a.r*a.r,mc=c.r*c.r,tot=ma+mc;
     var sa=(mc/tot)*overlap*0.82,sc=(ma/tot)*overlap*0.82;
     a.x-=nx*sa;a.y-=ny*sa;
@@ -847,6 +856,7 @@ function physics(dt){
       b.px=b.x;b.py=b.y;
       b.x+=vx;b.y+=vy+g*sdt*sdt;
       b.age+=sdt;
+      b.sup=false;                     /* опора пересчитывается решателем */
       if(b.rest>0)b.rest-=sdt;
     }
     for(var it=0;it<ITER;it++)solve();
@@ -967,15 +977,28 @@ function seeTier(t){
   if(!P.seen[t]){P.seen[t]=1;paintChain();}
 }
 
+/* Проигрыш = стопка ДОРОСЛА до черты, а не «что-то мелькнуло сверху».
+   Фрукт, подпрыгнувший после слияния, летит вверх свободно: он ни на
+   что не опирается и движется — такой случай игнорируется полностью.
+   Опасным считается только тело, которое одновременно:
+     • старше 1.2 с (не только что брошено),
+     • стоит на полу или на другом фрукте (b.sup),
+     • практически неподвижно,
+     • заметно (на четверть радиуса) торчит выше черты,
+   и держится так больше секунды лично — свой таймер b.hot. */
 function checkOver(dt){
   if(G.state!=='play')return;
   var danger=false;
   for(var i=0;i<bodies.length;i++){
     var b=bodies[i];
-    if(b.age<0.9)continue;                       /* только что брошенный не считается */
     var v=Math.abs(b.y-b.py)+Math.abs(b.x-b.px);
-    if(v>W*0.004)continue;                        /* ещё летит/катится */
-    if(b.y-b.r<lineY){danger=true;break;}
+    var bad = b.age>1.2 && b.sup && v<W*0.0035 && (b.y-b.r)<lineY-b.r*0.25;
+    if(bad){
+      b.hot+=dt;
+      if(b.hot>1.0)danger=true;
+    }else{
+      b.hot=Math.max(0,b.hot-dt*2);
+    }
   }
   if(danger){
     G.overT+=dt;
@@ -1026,6 +1049,7 @@ function revive(){
       burst(b.x,b.y,FR[b.t].c,b.t);
     }
     bodies=bodies.slice(kill);
+    for(var k=0;k<bodies.length;k++){bodies[k].hot=0;}  /* таймеры опасности обнуляются */
     G.overT=0;G.state='play';G.canDrop=true;G.cdT=0;
     hideAll();
     sfx('coin');toast('📺 Продолжаем!');
@@ -1295,7 +1319,8 @@ function draw(dt){
   ctx.stroke();
   ctx.restore();
 
-  /* красная черта */
+  /* красная черта. Мигает только при настоящей угрозе — когда стопка
+     реально доросла и держится. Подписываем, чтобы игрок понимал. */
   var over=G.overT>0.15;
   ctx.save();
   ctx.setLineDash([W*0.028,W*0.020]);
@@ -1303,6 +1328,13 @@ function draw(dt){
   ctx.strokeStyle=over?'rgba(240,60,60,'+(0.55+Math.sin(Date.now()/90)*0.35)+')'
                       :'rgba(230,110,80,.42)';
   ctx.beginPath();ctx.moveTo(BX,lineY);ctx.lineTo(W-BX,lineY);ctx.stroke();
+  if(over){
+    ctx.setLineDash([]);
+    ctx.font='900 '+Math.round(W*0.036)+'px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillStyle='rgba(240,60,60,'+(0.6+Math.sin(Date.now()/90)*0.3)+')';
+    ctx.fillText('СТОПКА У КРАЯ!',W/2,lineY-W*0.018);
+  }
   ctx.restore();
 
   /* призрак падения */
