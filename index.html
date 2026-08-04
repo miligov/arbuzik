@@ -33,10 +33,10 @@ body{
 #nextCard{width:74px;text-align:center;padding:4px 6px}
 #nextCard .lb{font-size:9.5px;font-weight:800;color:#a2622a;letter-spacing:.5px}
 #nextCv{width:46px;height:46px;display:block;margin:1px auto 0}
-#btnCol{display:flex;flex-direction:column;gap:5px}
-.mini{width:34px;height:34px;border:0;border-radius:11px;cursor:pointer;
+#btnCol{display:flex;flex-direction:row;gap:4px;align-items:flex-start;flex:0 0 auto}
+.mini{width:30px;height:30px;border:0;border-radius:9px;cursor:pointer;
   background:rgba(255,255,255,.55);border:2px solid rgba(255,255,255,.7);
-  font-size:15px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
   box-shadow:0 3px 0 rgba(160,90,30,.18);color:#6b3410}
 .mini:active{transform:translateY(2px);box-shadow:none}
 
@@ -406,19 +406,18 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
 /* ===== ПАУЗА-ВИДЖЕТ =====
    Требование модерации ВК: с телефона должен быть выход в главное
    меню. Кнопка висит поверх игрового слоя, лист-меню — поверх всего. */
+/* Кнопка паузы встроена в шапку (как остальные кнопки) и больше
+   НЕ плавает поверх интерфейса: раньше она перекрывала кнопку звука
+   в правом верхнем углу (элементы накладывались). */
 #pw{
-  position:fixed;top:calc(8px + env(safe-area-inset-top));
-  right:calc(8px + env(safe-area-inset-right));
-  width:42px;height:42px;border-radius:13px;cursor:pointer;z-index:2147483000;
-  border:1px solid rgba(255,255,255,.26);
-  background:linear-gradient(180deg,rgba(30,34,52,.92),rgba(14,17,28,.94));
-  color:#eaf0ff;font:900 15px/1 -apple-system,Segoe UI,Roboto,sans-serif;
-  letter-spacing:1px;display:none;align-items:center;justify-content:center;
-  box-shadow:0 3px 12px rgba(0,0,0,.5);backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);padding:0;
+  flex:0 0 auto;width:30px;height:30px;border:0;border-radius:9px;cursor:pointer;
+  background:rgba(255,255,255,.55);border:2px solid rgba(255,255,255,.7);
+  font:900 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;color:#6b3410;
+  display:none;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 3px 0 rgba(160,90,30,.18);
 }
 #pw.on{display:flex}
-#pw:active{transform:translateY(2px)}
+#pw:active{transform:translateY(2px);box-shadow:none}
 #pwScr{
   position:fixed;inset:0;z-index:2147483001;display:none;
   align-items:center;justify-content:center;flex-direction:column;gap:12px;
@@ -450,11 +449,11 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
 </head>
 <body>
 <!-- Пауза и выход в главное меню (требование модерации ВК) -->
-<button id="pw" aria-label="Пауза">II</button>
 <div id="pwScr" role="dialog" aria-modal="true" aria-label="Пауза">
   <h3>Пауза</h3>
   <button class="pwGo" id="pwGo">Продолжить</button>
   <button class="pwSm vibBtn" id="pwVib">Вибрация: вкл</button>
+  <button class="pwSm sndBtn" id="pwSnd">🔊 Звук: вкл</button>
   <button class="pwOut" id="pwOut">Выйти в главное меню</button>
 </div>
 
@@ -471,8 +470,9 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
       <canvas id="nextCv" width="92" height="92"></canvas>
     </div>
     <div id="btnCol">
-      <button class="mini" id="sndBtn">🔊</button>
-      <button class="mini" id="menuBtn">☰</button>
+      <button class="mini" id="sndBtn" title="Звук">🔊</button>
+      <button class="mini" id="pw" aria-label="Пауза">II</button>
+      <button class="mini" id="menuBtn" title="Меню">☰</button>
     </div>
   </div>
 
@@ -492,6 +492,7 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
     <button class="btn" id="playBtn">ИГРАТЬ</button>
     <div class="row">
       <button class="btn sm" id="howBtn">❓ Как играть</button>
+      <button class="btn sm sndBtn" id="sndBtn2">🔊 Звук: вкл</button>
     </div>
   </div>
 
@@ -516,6 +517,7 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
     <div id="newRec">🏆 Новый рекорд!</div>
     <div id="goStats"></div>
     <button class="btn g" id="reviveBtn">📺 ПРОДОЛЖИТЬ</button>
+    <button class="btn ad" id="dblBtn">📺 УДВОИТЬ ОЧКИ</button>
     <button class="btn" id="againBtn">ЕЩЁ РАЗ</button>
     <div class="row">
       <button class="btn sm" id="shareBtn">📣 Похвастаться</button>
@@ -530,7 +532,20 @@ h2{letter-spacing:-.5px !important;font-weight:900 !important}
   <div id="toast"></div>
 </div>
 
-<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+<script>
+/* VK Bridge 3.0.2 — встроен в файл: запуск и синхронизация не зависят
+   от внешних CDN (блокирующий внешний скрипт мог мешать запуску). */
+(()=>{"use strict";let e;var t={};let p="u">typeof window,n=!!(p&&window.AndroidBridge),o=!!(p&&window.webkit?.messageHandlers?.VKWebAppClose),r=!!(p&&window.ReactNativeWebView&&"function"==typeof window.ReactNativeWebView.postMessage),i=p&&!n&&!o,a=i&&/(^\?|&)vk_platform=mobile_web(&|$)/.test(location.search),s=i?"message":"VKWebAppEvent",d=["VKWebAppInit","VKWebAppGetCommunityAuthToken","VKWebAppAddToCommunity","VKWebAppAddToHomeScreenInfo","VKWebAppClose","VKWebAppCopyText","VKWebAppCreateHash","VKWebAppGetUserInfo","VKWebAppSetLocation","VKWebAppSendToClient","VKWebAppGetClientVersion","VKWebAppGetPhoneNumber","VKWebAppGetEmail","VKWebAppGetGroupInfo","VKWebAppGetGeodata","VKWebAppGetCommunityToken","VKWebAppGetConfig","VKWebAppGetLaunchParams","VKWebAppSetTitle","VKWebAppGetAuthToken","VKWebAppCallAPIMethod","VKWebAppJoinGroup","VKWebAppLeaveGroup","VKWebAppAllowMessagesFromGroup","VKWebAppDenyNotifications","VKWebAppAllowNotifications","VKWebAppOpenPayForm","VKWebAppOpenApp","VKWebAppShare","VKWebAppShowWallPostBox","VKWebAppScroll","VKWebAppShowOrderBox","VKWebAppShowLeaderBoardBox","VKWebAppShowInviteBox","VKWebAppShowRequestBox","VKWebAppAddToFavorites","VKWebAppShowStoryBox","VKWebAppStorageGet","VKWebAppStorageGetKeys","VKWebAppStorageSet","VKWebAppFlashGetInfo","VKWebAppSubscribeStoryApp","VKWebAppOpenWallPost","VKWebAppCheckAllowedScopes","VKWebAppCheckBannerAd","VKWebAppHideBannerAd","VKWebAppShowBannerAd","VKWebAppCheckNativeAds","VKWebAppShowNativeAds","VKWebAppRetargetingPixel","VKWebAppConversionHit","VKWebAppShowSubscriptionBox","VKWebAppCheckSurvey","VKWebAppShowSurvey","VKWebAppScrollTop","VKWebAppScrollTopStart","VKWebAppScrollTopStop","VKWebAppShowSlidesSheet","VKWebAppTranslate","VKWebAppRecommend","VKWebAppAddToProfile","VKWebAppGetFriends",...i&&!a?["VKWebAppResizeWindow","VKWebAppAddToMenu","VKWebAppShowInstallPushBox","VKWebAppShowCommunityWidgetPreviewBox","VKWebAppCallStart","VKWebAppCallJoin","VKWebAppCallGetStatus"]:["VKWebAppShowImages"]],A=p?window.AndroidBridge:void 0,b=o?window.webkit.messageHandlers:void 0,l=i?parent:void 0,u=function(t){var p;let a,u,W,V,K=[],c=Math.random().toString(36).substring(2,5);function w(e){K.push(e)}function S(e){return n?!!(A&&"function"==typeof A[e]):o?!!(b?.[e]&&"function"==typeof b[e].postMessage):!!i&&d.includes(e)}function f(){return o||n}function h(){return i&&window.parent!==window}function g(){return f()||h()}function v(e){if(o||n)return[...K].map(t=>t.call(null,e));let t=e?.data;if(!i||!t)return;if(r&&"string"==typeof t)try{t=JSON.parse(t)}catch{}let{type:p,data:s,frameId:d}=t;if(p){if("VKWebAppSettings"===p){a=d;return}[...K].map(e=>e({detail:{type:p,data:s}}))}}r&&/(android)/i.test(navigator.userAgent)?document.addEventListener(s,v):"u">typeof window&&"addEventListener"in window&&window.addEventListener(s,v);let y=(p=function(e,p){A?.[e]?A[e](JSON.stringify(p)):b?.[e]&&"function"==typeof b[e].postMessage?b[e].postMessage?.(p):r?window.ReactNativeWebView.postMessage(JSON.stringify({handler:e,params:p})):l&&"function"==typeof l.postMessage&&l.postMessage({handler:e,params:p,type:"vk-connect",webFrameId:a,connectVersion:t},"*")},u={current:0,next(){return++this.current}},W={},V={add(e,t){let p=null!=t?t:`${u.next()}_${c}`;return W[p]=e,p},resolve(e,t,p){let n=W[e];n&&(p(t)?n.resolve(t):n.reject(t),W[e]=null)}},w(e=>{if(e.detail?.data&&"object"==typeof e.detail.data&&"request_id"in e.detail.data){let{request_id:t,...p}=e.detail.data;t&&V.resolve(t,p,e=>!("error_type"in e))}}),function(e,t={}){return new Promise((n,o)=>{let r=V.add({resolve:n,reject:o},t.request_id);p(e,{...t,request_id:r})})});async function m(t){if(n||o)return S(t);if(e)return e.has(t);try{let t=await y("SetSupportedHandlers");e=new Set(t.supportedHandlers)}catch(t){e=new Set(["VKWebAppInit"])}return e.has(t)}return w(t=>{t.detail&&"SetSupportedHandlers"===t.detail.type&&(e=new Set(t.detail.data.supportedHandlers))}),{send:y,sendPromise:y,subscribe:w,unsubscribe:function(e){let t=K.indexOf(e);t>-1&&K.splice(t,1)},supports:function(e){return console.warn("bridge.supports method is deprecated. Use bridge.supportsAsync instead."),S(e)},supportsAsync:m,isWebView:f,isIframe:h,isEmbedded:g,isStandalone:function(){return!g()}}}("3.0.2");window.vkBridge=window.vkConnect=u;var W=window;for(var V in t)W[V]=t[V];t.__esModule&&Object.defineProperty(W,"__esModule",{value:!0})})();
+(function(){
+  if(typeof window!=='undefined'&&window.vkBridge)return;
+  try{
+    var s=document.createElement('script');
+    s.src='https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
+    s.async=true;s.onerror=function(){};
+    document.head.appendChild(s);
+  }catch(e){}
+})();
+</script>
 <script>
 (function(){
 'use strict';
@@ -696,10 +711,19 @@ function audioWake(){
   if(!actx())return;
   if(P.snd!==false)startMusic();
 }
+function paintSndBtns(){
+  var list=document.querySelectorAll('.sndBtn');
+  for(var i=0;i<list.length;i++){
+    var e=list[i];
+    var ico=e.getAttribute('data-ico')==='1'||e.id==='sndBtn';
+    e.textContent=ico?(P.snd?'🔊':'🔇'):(P.snd?'🔊 Звук: вкл':'🔇 Звук: выкл');
+    e.setAttribute('aria-pressed',P.snd?'true':'false');
+  }
+}
 function toggleSnd(){
   P.snd=(P.snd===false);
   if(P.snd){A.started=true;actx();startMusic();}else stopMusic();
-  $('sndBtn').textContent=P.snd?'🔊':'🔇';
+  paintSndBtns();
   save();toast(P.snd?'🔊 Звук включён':'🔇 Звук выключен');
 }
 
@@ -708,10 +732,15 @@ function toggleSnd(){
    ============================================================ */
 var VK={ready:false};
 var bridge=window.vkBridge||null;
+function vkBridgeNow(){return window.vkBridge||window.vkConnect||null;}
 function vkInit(){
-  if(!bridge||!bridge.send)return;
+  if(!VK.ready){
+    bridge=vkBridgeNow();
+    if(!bridge||!bridge.send)return false;
+  }
   try{
     bridge.send('VKWebAppInit').then(function(){
+      if(VK.ready)return;
       VK.ready=true;
       bridge.send('VKWebAppGetUserInfo').then(function(u){
         if(u&&u.first_name)P.name=u.first_name;
@@ -719,7 +748,14 @@ function vkInit(){
       cloudLoad();
     }).catch(nop);
   }catch(e){}
+  return true;
 }
+(function(){
+  var tries=0;
+  var t=setInterval(function(){
+    if(vkInit()||++tries>40)clearInterval(t);
+  },300);
+})();
 
 /* ---------- вибрация: пользователь может выключить ----------
    Требование модерации ВК: на мобильных устройствах должна быть
@@ -747,7 +783,10 @@ function paintVibBtns(){
   var on=vibOn();
   var list=document.querySelectorAll('.vibBtn');
   for(var i=0;i<list.length;i++){
-    list[i].textContent=on?'Вибрация: вкл':'Вибрация: выкл';
+    var ico=list[i].getAttribute('data-ico')==='1';
+    list[i].textContent=ico?(on?'\u2707':'\u2205')
+                          :(on?'Вибрация: вкл':'Вибрация: выкл');
+    list[i].title=on?'Вибрация включена':'Вибрация выключена';
     list[i].setAttribute('aria-pressed',on?'true':'false');
   }
 }
@@ -770,6 +809,11 @@ function paintVibBtns(){
     b.className=snd.className+' vibBtn';
     b.type='button';
     b.setAttribute('aria-label','Вибрация');
+    /* Если сосед — компактная иконка, подписи не будет: длинный текст
+       ломает шапку. paintVibBtns() учитывает это через data-ico. */
+    if(/\bico\b/.test(snd.className)||(snd.textContent||'').trim().length<=2){
+      b.setAttribute('data-ico','1');
+    }
     b.textContent='Вибрация: вкл';
     snd.parentNode.insertBefore(b,snd.nextSibling);
     b.addEventListener('pointerdown',function(e){
@@ -858,6 +902,10 @@ function pwGuard(){
     tap(document.getElementById('pwVib'),function(){
       if(typeof toggleVib==='function')toggleVib();
     });
+    tap(document.getElementById('pwSnd'),function(){
+      if(typeof toggleSnd==='function')toggleSnd();
+    });
+    if(typeof paintSndBtns==='function')paintSndBtns();
     if(typeof paintVibBtns==='function')paintVibBtns();
     /* кнопка видна ровно тогда, когда идёт игра */
     setInterval(function(){
@@ -992,10 +1040,20 @@ function save(){
 }
 function merge(o){
   if(!o||typeof o!=='object')return;
-  ['name','best','bestDaily','dailyDate','games','merges','maxTier','mode','totalScore','melons']
-    .forEach(function(k){if(typeof o[k]==='number'||typeof o[k]==='string')P[k]=o[k];});
+  /* Двусторонняя синхронизация (правило 2.3.8): числовые показатели
+     берутся по МАКСИМУМУ — прогресс на любой платформе не теряется. */
+  ['best','bestDaily','games','merges','maxTier','totalScore','melons']
+    .forEach(function(k){
+      if(typeof o[k]==='number'&&isFinite(o[k]))
+        P[k]=Math.max(P[k]||0,Math.max(0,Math.round(o[k])));
+    });
+  if(typeof o.dailyDate==='string'&&o.dailyDate>P.dailyDate)P.dailyDate=o.dailyDate;
+  if(typeof o.mode==='string'&&o.mode)P.mode=o.mode;
+  if(typeof o.name==='string'&&o.name)P.name=o.name;
   if(typeof o.snd==='boolean')P.snd=o.snd;
-  if(o.seen&&typeof o.seen==='object')P.seen=o.seen;
+  if(o.seen&&typeof o.seen==='object'){
+    for(var k in o.seen)if(o.seen[k])P.seen[k]=1;
+  }
 }
 function localLoad(){try{var s=localStorage.getItem(SAVE);if(s)merge(JSON.parse(s));}catch(e){}}
 function cloudLoad(){
@@ -1005,9 +1063,13 @@ function cloudLoad(){
       var kv=(d.keys||[])[0];
       if(kv&&kv.value){
         var c=JSON.parse(kv.value);
-        if((c.best||0)>(P.best||0)||(c.totalScore||0)>(P.totalScore||0)){
-          merge(c);paintTop();paintChain();toast('☁️ Прогресс загружен');
-        }else save();
+        /* двусторонняя синхронизация: объединяем облачный и локальный
+           прогресс (максимум по полям), затем пишем единое состояние
+           обратно — и в облако, и локально */
+        merge(c);
+        save();
+        paintTop();paintChain();
+        toast('☁️ Прогресс синхронизирован');
       }else save();
     }catch(e){}
   }).catch(nop);
@@ -1335,6 +1397,11 @@ function gameOver(){
     'Лучший фрукт за игру: <b>'+bestInPlay()+'</b><br>'+
     'Слияний: <b>'+G.merges2()+'</b> · Рекорд: <b>'+fmt(P.best)+'</b>';
   $('reviveBtn').style.display=G.revived<1?'block':'none';
+  /* Удвоение очков — одноразовая награда за ролик в конце забега */
+  G.doubled=false;
+  $('dblBtn').style.display=G.score>0?'block':'none';
+  $('dblBtn').disabled=false;
+  $('dblBtn').textContent='📺 УДВОИТЬ ОЧКИ';
   show('overScr');
 }
 G.merges2=function(){return G.dropped?Math.max(0,G.dropped- bodies.length):0;};
@@ -1989,6 +2056,26 @@ $('howClose').onclick=function(){sfx('click');show('introScr');};
 $('shareBtn').onclick=share;
 $('grpBtn').onclick=joinGroup;
 $('reviveBtn').onclick=revive;
+/* Плюшка за рекламу: ×2 к финальному счёту (и к рекорду) */
+$('dblBtn').onclick=function(){
+  if(G.doubled)return;
+  var b=$('dblBtn');
+  b.disabled=true;
+  watchAd(function(ok){
+    if(!ok){b.disabled=false;return;}
+    G.doubled=true;
+    var add=G.score;
+    G.score+=add;
+    P.totalScore+=add;
+    if(G.score>(P.best||0)){P.best=G.score;$('newRec').style.display='block';}
+    if(P.mode==='daily'&&G.score>(P.bestDaily||0))P.bestDaily=G.score;
+    save();
+    $('finalScore').textContent=fmt(G.score);
+    b.textContent='✓ Очки удвоены';
+    sfx('coin');haptic('medium');
+    toast('✨ +'+fmt(add)+' очков!');
+  });
+};
 /* Пауза-виджет: как приостановить игру и выйти в меню */
 setPauseHooks({
   isPlaying:function(){return G.state==='play';},
@@ -2002,11 +2089,16 @@ $('menuBtn2').onclick=function(){
   sfx('click');G.state='menu';bodies=[];renderModes();show('introScr');
 };
 $('menuBtn').onclick=function(){sfx('click');renderStats();};
+$('sndBtn2').onclick=function(){toggleSnd();};
+paintSndBtns();
 $('sndBtn').onclick=function(e){e.stopPropagation();toggleSnd();};
 
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){save();stopMusic();}
-  else if(A.started&&P.snd!==false)startMusic();
+  else{
+    if(A.started&&P.snd!==false)startMusic();
+    if(VK.ready)cloudLoad();   /* возврат в приложение — синхронизация */
+  }
 });
 window.addEventListener('beforeunload',save);
 setInterval(function(){if(G.state==='play')save();},15000);
@@ -2040,6 +2132,10 @@ try{window.__MOD={
   link:function(){return typeof vkAppLink==='function'?vkAppLink():null;},
   vibOn:function(){return typeof vibOn==='function'?vibOn():null;},
   toggleVib:function(){return typeof toggleVib==='function'?toggleVib():null;},
+  sndOn:function(){return typeof P!=='undefined'?(P.snd!==false):null;},
+  merge:function(o){return typeof merge==='function'?merge(o):null;},
+  getP:function(){return typeof P!=='undefined'?JSON.parse(JSON.stringify(P)):null;},
+  toggleSnd:function(){return typeof toggleSnd==='function'?toggleSnd():null;},
   haptic:function(s){if(typeof haptic==='function')haptic(s);}
 };}catch(e){}
 
