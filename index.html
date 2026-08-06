@@ -19,7 +19,10 @@ body{
   background:linear-gradient(180deg,#ffd9a0 0%,#ffc27a 42%,#f9a95c 100%)}
 
 /* ---------- Шапка ---------- */
-#top{flex:0 0 auto;position:relative;z-index:5;
+/* Шапка всегда поверх экранов (заставка/правила/статы — z-index 30):
+   иначе кнопка звука на заставке не нажимается — модерация это
+   фиксировала как «кнопка отключения звука не работает». */
+#top{flex:0 0 auto;position:relative;z-index:70;
   padding:calc(8px + env(safe-area-inset-top)) 10px 6px;
   display:flex;align-items:flex-start;gap:8px}
 .card{background:rgba(255,255,255,.55);border:2px solid rgba(255,255,255,.7);
@@ -582,7 +585,11 @@ function actx(){
     try{
       var C=window.AudioContext||window.webkitAudioContext;
       A.ctx=new C();
-      A.master=A.ctx.createGain();A.master.gain.value=.9;A.master.connect(A.ctx.destination);
+      /* Мастер-громкость — общий рубильник всего звука. Если звук
+         выключен (P.snd===false), контекст создаётся сразу молчаливым:
+         и музыка, и эффекты идут через A.master. */
+      var muted=typeof P!=='undefined'&&P.snd===false;
+      A.master=A.ctx.createGain();A.master.gain.value=muted?0:.9;A.master.connect(A.ctx.destination);
       A.mus=A.ctx.createGain();A.mus.gain.value=.0001;A.mus.connect(A.master);
       A.sfx=A.ctx.createGain();A.sfx.gain.value=.9;A.sfx.connect(A.master);
     }catch(e){A.on=false;A.ctx=null;}
@@ -615,7 +622,10 @@ function nz(d,v,hpf,t0){
   s.connect(f);f.connect(g);g.connect(A.sfx);s.start(t);s.stop(t+d+.04);
 }
 function sfx(n,p){
-  if(!A.on||!actx())return;
+  /* Звук выключен кнопкой — эффекты не играют вообще.
+     Требование модерации: кнопка должна отключать ВЕСЬ звук,
+     а не только музыку. */
+  if(P.snd===false||!A.on||!actx())return;
   var c=A.ctx,t=c.currentTime;
   switch(n){
     case 'drop': bp(360,.07,'sine',.07,220); break;
@@ -712,17 +722,40 @@ function audioWake(){
   if(P.snd!==false)startMusic();
 }
 function paintSndBtns(){
+  /* Кнопка в шапке имеет класс «mini», а не «sndBtn» — раньше она
+     не попадала в список и её иконка после нажатия не менялась.
+     Теперь всегда добавляем её явно. */
   var list=document.querySelectorAll('.sndBtn');
-  for(var i=0;i<list.length;i++){
-    var e=list[i];
+  var set=new Set();
+  for(var i=0;i<list.length;i++)set.add(list[i]);
+  var head=document.getElementById('sndBtn');
+  if(head)set.add(head);
+  set.forEach(function(e){
     var ico=e.getAttribute('data-ico')==='1'||e.id==='sndBtn';
     e.textContent=ico?(P.snd?'🔊':'🔇'):(P.snd?'🔊 Звук: вкл':'🔇 Звук: выкл');
     e.setAttribute('aria-pressed',P.snd?'true':'false');
-  }
+  });
+}
+/* Мастер-громкость — общий рубильник. Через неё идут и музыка,
+   и все эффекты, поэтому она глушит всё разом. */
+function setMasterVol(v){
+  if(!A.ctx||!A.master)return;
+  var t=A.ctx.currentTime;
+  A.master.gain.cancelScheduledValues(t);
+  A.master.gain.setTargetAtTime(v,t,.04);
 }
 function toggleSnd(){
   P.snd=(P.snd===false);
-  if(P.snd){A.started=true;actx();startMusic();}else stopMusic();
+  if(P.snd){
+    A.started=true;
+    if(actx()){
+      setMasterVol(.9);
+      startMusic();
+    }
+  }else{
+    stopMusic();
+    setMasterVol(0);   /* глушит и музыку, и эффекты */
+  }
   paintSndBtns();
   save();toast(P.snd?'🔊 Звук включён':'🔇 Звук выключен');
 }
@@ -2143,5 +2176,5 @@ try{window.__MOD={
 
 
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26d56646bb58d59',t:'MTc4NjAxMTkyNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
